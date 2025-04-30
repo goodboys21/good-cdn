@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upload File ke GitHub</title>
+  <script defer src="upload.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
+    <h1 class="text-xl font-bold mb-4 text-center">Upload File ke GitHub</h1>
+    
+    <input type="file" id="fileInput" class="mb-4 w-full border p-2 rounded">
+    <button id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded">Upload</button>
+    
+    <div id="result" class="mt-4 hidden text-center"></div>
+  </div>
+</body>
+</html>
