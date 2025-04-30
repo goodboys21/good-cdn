@@ -1,82 +1,57 @@
-require('dotenv').config();
-const express = require('express');
-const multer = require('multer');
-const { Octokit } = require('@octokit/rest');
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
+const username = "bagusdeployvercel"; // Ganti kalau username lu beda
+const repo = "hxhdbebbsvsve";
+const token = "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"; // Ganti sama token GitHub lu
+const branch = "main";
 
-const app = express();
-const upload = multer({ dest: 'uploads/' });
-const port = 3000;
+document.getElementById("uploadBtn").addEventListener("click", async () => {
+  const fileInput = document.getElementById("fileInput");
+  const file = fileInput.files[0];
+  const resultBox = document.getElementById("result");
 
-const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-const owner = 'bagusdeployvercel';
-const repo = 'hxhdbebbsvsve';
-const folder = 'file';
+  if (!file) return alert("Pilih file dulu bro!");
 
-function generateRandomString(length = 7) {
-    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-}
+  const reader = new FileReader();
+  reader.onloadend = async () => {
+    const content = reader.result.split(',')[1]; // base64
 
-function sendTelegramNotification(originalName, fileSizeMB, fileUrl) {
-    const botToken = process.env.TELEGRAM_BOT_TOKEN;
-    const chatId = process.env.TELEGRAM_CHAT_ID;
-    const time = new Date().toLocaleString();
+    const ext = file.name.split('.').pop();
+    const randomId = Math.random().toString(36).substring(2, 7);
+    const fileName = `${randomId}.${ext}`;
+    const path = `file/${fileName}`;
 
-    const text = `📤 File Baru Diupload!\n\nLink: ${fileUrl}\nNama: ${originalName}\nUkuran: ${fileSizeMB} MB\nWaktu: ${time}\nBy Bagus Bahril`;
+    const apiUrl = `https://api.github.com/repos/${username}/${repo}/contents/${path}`;
+    
+    const body = {
+      message: `upload ${fileName}`,
+      content: content,
+      branch: branch
+    };
 
-    axios.post(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        chat_id: chatId,
-        text: text
-    }).catch(err => console.error('Gagal kirim Telegram:', err.response?.data));
-}
+    const res = await fetch(apiUrl, {
+      method: "PUT",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
 
-app.post('/upload', upload.single('file'), async (req, res) => {
-    const file = req.file;
-    if (!file) return res.status(400).json({ status: 'error', message: 'Tidak ada file!' });
+    const data = await res.json();
 
-    const allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mp3', 'pdf', 'zip', 'rar', 'txt', 'html', 'css', 'js'];
-    const maxSize = 3 * 1024 * 1024; // 3MB
-    const ext = path.extname(file.originalname).slice(1).toLowerCase();
-
-    if (!allowedExtensions.includes(ext)) {
-        fs.unlinkSync(file.path);
-        return res.status(400).json({ status: 'error', message: 'Format file tidak didukung!' });
+    if (res.ok) {
+      const fileUrl = `https://${username}.github.io/file/${fileName}`;
+      resultBox.classList.remove("hidden");
+      resultBox.innerHTML = `
+        <p class="text-green-600 font-semibold">Upload berhasil!</p>
+        <a href="${fileUrl}" target="_blank" class="text-blue-600 underline">${fileUrl}</a>
+      `;
+    } else {
+      resultBox.classList.remove("hidden");
+      resultBox.innerHTML = `
+        <p class="text-red-600 font-semibold">Upload gagal: ${data.message}</p>
+      `;
     }
+  };
 
-    if (file.size > maxSize) {
-        fs.unlinkSync(file.path);
-        return res.status(400).json({ status: 'error', message: 'Ukuran file melebihi batas 3MB!' });
-    }
-
-    const fileName = generateRandomString() + '.' + ext;
-    const content = fs.readFileSync(file.path);
-    const encodedContent = content.toString('base64');
-
-    try {
-        await octokit.repos.createOrUpdateFileContents({
-            owner,
-            repo,
-            path: `${folder}/${fileName}`,
-            message: `Upload file ${fileName}`,
-            content: encodedContent
-        });
-
-        const fileUrl = `https://cdn.baguss.xyz/file/${fileName}`;
-        const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
-
-        sendTelegramNotification(file.originalname, fileSizeMB, fileUrl);
-
-        fs.unlinkSync(file.path);
-        res.json({ status: 'success', url: fileUrl });
-    } catch (err) {
-        console.error('Upload gagal:', err);
-        res.status(500).json({ status: 'error', message: 'Upload ke GitHub gagal!' });
-    }
-});
-
-app.listen(port, () => {
-    console.log(`Upload server running on http://localhost:${port}`);
+  reader.readAsDataURL(file);
 });
