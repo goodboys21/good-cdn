@@ -1,0 +1,2 @@
+# good-cdn
+cdn-file
